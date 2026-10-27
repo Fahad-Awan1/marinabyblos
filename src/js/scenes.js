@@ -88,27 +88,77 @@ export function initRooms() {
 
 /*
  * Dining (Lando "on socials" fan): the venue cards start stacked and fan out
- * into an arc as the section arrives; picking a card swaps the details below.
+ * into an arc as the section arrives, then rotate like a carousel so the active
+ * venue (auto-played, or picked) sits in the centre and its details show below.
  */
 export function initDining() {
   const root = document.querySelector('[data-dining]');
   if (!root) return;
   const cards = [...root.querySelectorAll('.card')];
   const infos = [...root.querySelectorAll('.vi')];
-  const mid = (cards.length - 1) / 2;
+  const n = cards.length;
+  const mid = (n - 1) / 2;
   let current = cards.findIndex((c) => c.classList.contains('is-active'));
-  cards.forEach((c, i) => gsap.set(c, { zIndex: 10 - Math.abs(i - mid) }));
+
+  // Each card sits in a slot relative to the active venue (0 = centre, ±1, ±2 out
+  // along the arc). The scroll-in (fan.p) and the carousel rotation (slot.d) both
+  // feed one layout function, so neither overwrites the other.
+  const offset = (i, c) => ((i - c + n + mid) % n) - mid;
+  const slots = cards.map((_, i) => ({ d: offset(i, current) }));
+  const fan = { p: reduceMotion ? 1 : 0 };
+  let spread = 0.78;
+  let rot = 8;
+  let drop = 18;
+  const layout = () => {
+    const w = cards[0].offsetWidth;
+    const p = fan.p;
+    cards.forEach((c, i) => {
+      const d = slots[i].d;
+      gsap.set(c, {
+        x: d * w * spread * p,
+        y: 80 * (1 - p) + d * d * drop * p,
+        rotate: d * (2 + (rot - 2) * p),
+        scale: 0.86 + 0.14 * p,
+        zIndex: 10 - Math.round(Math.abs(d) * 2),
+      });
+    });
+  };
 
   gsap.matchMedia().add(BP, ({ conditions: { m } }) => {
+    spread = m ? 0.42 : 0.78;
+    rot = m ? 7 : 8;
+    drop = m ? 9 : 18;
+    layout();
     if (reduceMotion) return;
-    const w = () => cards[0].offsetWidth;
-    const spread = m ? 0.42 : 0.78;
-    const rot = m ? 7 : 8;
-    gsap.timeline({ scrollTrigger: { trigger: root.querySelector('.fan'), start: 'top 85%', end: m ? 'top 35%' : 'top 25%', scrub: 0.8, invalidateOnRefresh: true } })
-      .fromTo(cards,
-        { x: 0, y: 80, rotate: (i) => (i - mid) * 2, scale: 0.86 },
-        { x: (i) => (i - mid) * w() * spread, y: (i) => Math.abs(i - mid) ** 2 * (m ? 9 : 18), rotate: (i) => (i - mid) * rot, scale: 1, ease: 'power2.out' });
+    gsap.fromTo(fan, { p: 0 }, {
+      p: 1, ease: 'power2.out', onUpdate: layout,
+      scrollTrigger: { trigger: root.querySelector('.fan'), start: 'top 85%', end: m ? 'top 35%' : 'top 25%', scrub: 0.8, onRefresh: layout },
+    });
   });
+
+  // Rotate the carousel so card i is in the centre. A card that has to cross from
+  // one end of the arc to the other slips out past its edge and comes back in from
+  // the opposite side instead of sweeping across the front.
+  const rotateTo = (i) => {
+    cards.forEach((c, j) => {
+      const s = slots[j];
+      const to = offset(j, i);
+      gsap.killTweensOf(s);
+      if (reduceMotion) { s.d = to; return; }
+      if (Math.abs(to - s.d) > mid) {
+        const out = s.d + Math.sign(s.d || -to);
+        gsap.timeline({ onUpdate: layout })
+          .to(s, { d: out, duration: 0.45, ease: 'power2.in' })
+          .to(c, { autoAlpha: 0, duration: 0.2 }, 0.25)
+          .set(s, { d: to + Math.sign(to) })
+          .to(s, { d: to, duration: 0.75, ease: 'expo.out' })
+          .to(c, { autoAlpha: 1, duration: 0.3 }, '<');
+      } else {
+        gsap.to(s, { d: to, duration: 1.1, ease: 'expo.inOut', onUpdate: layout });
+      }
+    });
+    if (reduceMotion) layout();
+  };
 
   const show = (i) => {
     if (i === current) return;
@@ -116,6 +166,7 @@ export function initDining() {
     const inn = infos[i];
     cards.forEach((c, j) => { c.classList.toggle('is-active', j === i); c.setAttribute('aria-selected', String(j === i)); });
     current = i;
+    rotateTo(i);
     inn.classList.add('is-active');
     if (reduceMotion) { out.classList.remove('is-active'); return; }
     gsap.timeline()
@@ -125,18 +176,18 @@ export function initDining() {
   };
   // Auto-play: step to the next venue while the fan is on screen. Hover or keyboard
   // focus holds it; picking a card restarts the countdown from that card.
-  const fan = root.querySelector('.fan');
+  const fanEl = root.querySelector('.fan');
   let inView = false;
   let held = false;
   const timer = gsap.delayedCall(4.5, () => { show((current + 1) % cards.length); restart(); }).pause();
   const restart = () => {
     if (inView && !held && !reduceMotion) timer.restart(true); else timer.pause();
   };
-  ScrollTrigger.create({ trigger: fan, start: 'top 60%', end: 'bottom 20%', onToggle: (self) => { inView = self.isActive; restart(); } });
-  fan.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') { held = true; restart(); } });
-  fan.addEventListener('pointerleave', () => { held = false; restart(); });
-  fan.addEventListener('focusin', (e) => { if (e.target.matches(':focus-visible')) { held = true; restart(); } });
-  fan.addEventListener('focusout', () => { held = false; restart(); });
+  ScrollTrigger.create({ trigger: fanEl, start: 'top 60%', end: 'bottom 20%', onToggle: (self) => { inView = self.isActive; restart(); } });
+  fanEl.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') { held = true; restart(); } });
+  fanEl.addEventListener('pointerleave', () => { held = false; restart(); });
+  fanEl.addEventListener('focusin', (e) => { if (e.target.matches(':focus-visible')) { held = true; restart(); } });
+  fanEl.addEventListener('focusout', () => { held = false; restart(); });
 
   cards.forEach((c, i) => {
     c.addEventListener('click', () => { show(i); restart(); });
