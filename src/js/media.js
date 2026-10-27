@@ -1,16 +1,24 @@
 // Background videos: pick a size for the device, load only when needed, pause off-screen.
 
-const saveData = navigator.connection?.saveData;
+const conn = navigator.connection;
+const saveData = conn?.saveData;
+const slowNet = /(^|-)(2g|3g)$/.test(conn?.effectiveType || '');
 
+/*
+ * Full-bleed videos are enlarged with object-fit: cover. On a phone held upright
+ * the video's *height* has to fill a tall screen at 2-3× pixel density, so phones
+ * need the HD file just as much as desktops. Only data-saver / slow connections
+ * step down a size.
+ */
 function pickSrc(video) {
-  const px = window.innerWidth * Math.min(window.devicePixelRatio || 1, 2);
-  if (saveData || window.innerWidth < 900) return video.dataset.srcSm;
-  if (px >= 1400 && video.dataset.srcHd) return video.dataset.srcHd;
-  return video.dataset.srcLg;
+  const { srcSm, srcLg, srcHd } = video.dataset;
+  if (slowNet) return srcLg || srcSm;
+  return srcHd || srcLg || srcSm;
 }
 
 export function loadVideo(video) {
-  if (!video || video.dataset.loaded || saveData) return;
+  if (!video || video.dataset.loaded) return;
+  if (saveData) { video.preload = 'none'; return; } // poster only for data-saver users
   video.dataset.loaded = '1';
   video.src = pickSrc(video);
   video.load();
