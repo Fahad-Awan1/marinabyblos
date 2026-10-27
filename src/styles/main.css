@@ -190,8 +190,19 @@ html.lenis, html.lenis body { height: auto; }
 .nav.is-hidden { transform: translateY(-105%); }
 .nav[data-theme='dark'] { color: var(--sand); }
 .nav[data-theme='dark']::before { background: rgba(13, 23, 25, .55); }
-.nav__logo { display: flex; flex-direction: column; line-height: 1; justify-self: start; }
-.nav__logo-word { font-family: var(--cond); font-stretch: 62%; font-variation-settings: 'wdth' 62; font-weight: 700; font-size: 28px; letter-spacing: .01em; text-transform: uppercase; }
+/* Logo mark: a Byblos arch framing the sun setting over the marina */
+.mark { display: block; flex: none; overflow: visible; }
+.mark__arch, .mark__wave { fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.mark__wave { stroke-width: 2; }
+.mark__sun { fill: var(--sun); transition: transform .8s var(--ease); }
+.mark__wave { transition: transform 1.2s var(--ease); }
+a:hover .mark__sun, .mark:hover .mark__sun { transform: translateY(-3px); }
+a:hover .mark__wave, .mark:hover .mark__wave { transform: translateX(-10px); }
+
+.nav__logo { display: flex; align-items: center; gap: 12px; justify-self: start; }
+.nav__logo .mark { width: 34px; height: 37px; }
+.nav__logo-text { display: flex; flex-direction: column; line-height: 1; }
+.nav__logo-word { font-family: var(--cond); font-stretch: 62%; font-variation-settings: 'wdth' 62; font-weight: 700; font-size: 28px; letter-spacing: .01em; text-transform: uppercase; white-space: nowrap; }
 .nav__logo-sub { font-family: var(--serif); font-style: italic; font-size: 13px; opacity: .7; margin-top: 2px; }
 .nav__links { display: flex; gap: 30px; font-size: 14px; font-weight: 500; letter-spacing: .02em; }
 .nav__links a { opacity: .78; transition: opacity .3s; }
@@ -492,7 +503,8 @@ a:hover > .roll > span { transform: translateY(-100%); }
 .footer__brand { display: grid; gap: 18px; align-content: start; }
 .footer__brand > p:not(.footer__logo) { color: var(--muted-n); font-size: 18px; }
 .footer__brand em { font-family: var(--serif); color: var(--sun); }
-.footer__logo { font-family: var(--cond); font-stretch: 62%; font-variation-settings: 'wdth' 62; font-weight: 700; text-transform: uppercase; font-size: 40px; line-height: 1; }
+.footer__logo { display: flex; align-items: center; gap: 16px; font-family: var(--cond); font-stretch: 62%; font-variation-settings: 'wdth' 62; font-weight: 700; text-transform: uppercase; font-size: 40px; line-height: 1; }
+.footer__logo .mark { width: 46px; height: 51px; }
 .socials { display: flex; gap: 8px; margin-top: 8px; }
 .socials a { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 12px; background: rgba(243,234,219,.07); transition: background-color .3s, color .3s; }
 .socials a:hover { background: var(--sun); color: var(--night); }
@@ -533,6 +545,10 @@ a:hover > .roll > span { transform: translateY(-100%); }
 }
 
 @media (max-width: 900px) {
+  .nav__logo { gap: 9px; }
+  .nav__logo .mark { width: 27px; height: 30px; }
+  .nav__logo-word { font-size: 23px; }
+  .nav__logo-sub { font-size: 11.5px; }
   :root { --nav-h: 70px; }
   .nav .btn--ghost { display: none; }
   .hero { height: auto; min-height: 100svh; padding-bottom: var(--gutter); display: flex; flex-direction: column; justify-content: flex-end; }

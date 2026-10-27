@@ -154,14 +154,16 @@ export function initDining() {
           .to(s, { d: to, duration: 0.75, ease: 'expo.out' })
           .to(c, { autoAlpha: 1, duration: 0.3 }, '<');
       } else {
-        gsap.to(s, { d: to, duration: 1.1, ease: 'expo.inOut', onUpdate: layout });
+        gsap.to(s, { d: to, duration: 0.9, ease: 'expo.inOut', onUpdate: layout });
       }
     });
     if (reduceMotion) layout();
   };
 
+  let swap;
   const show = (i) => {
     if (i === current) return;
+    swap?.progress(1); // finish any swap still running so two panels never stay visible
     const out = infos[current];
     const inn = infos[i];
     cards.forEach((c, j) => { c.classList.toggle('is-active', j === i); c.setAttribute('aria-selected', String(j === i)); });
@@ -169,17 +171,18 @@ export function initDining() {
     rotateTo(i);
     inn.classList.add('is-active');
     if (reduceMotion) { out.classList.remove('is-active'); return; }
-    gsap.timeline()
-      .to(out.children, { autoAlpha: 0, y: -14, duration: 0.3, stagger: 0.03, ease: 'power2.in' })
+    // short enough to finish well inside one auto-play step
+    swap = gsap.timeline()
+      .to(out.children, { autoAlpha: 0, y: -12, duration: 0.2, stagger: 0.02, ease: 'power2.in' })
       .add(() => { out.classList.remove('is-active'); gsap.set(out.children, { clearProps: 'all' }); })
-      .fromTo(inn.children, { autoAlpha: 0, y: 24 }, { autoAlpha: 1, y: 0, duration: 0.9, stagger: 0.06, ease: 'expo.out' });
+      .fromTo(inn.children, { autoAlpha: 0, y: 20 }, { autoAlpha: 1, y: 0, duration: 0.6, stagger: 0.04, ease: 'expo.out' });
   };
   // Auto-play: step to the next venue while the fan is on screen. Hover or keyboard
   // focus holds it; picking a card restarts the countdown from that card.
   const fanEl = root.querySelector('.fan');
   let inView = false;
   let held = false;
-  const timer = gsap.delayedCall(4.5, () => { show((current + 1) % cards.length); restart(); }).pause();
+  const timer = gsap.delayedCall(1.5, () => { show((current + 1) % cards.length); restart(); }).pause();
   const restart = () => {
     if (inView && !held && !reduceMotion) timer.restart(true); else timer.pause();
   };
