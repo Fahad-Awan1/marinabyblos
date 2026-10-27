@@ -1,4 +1,4 @@
-import { gsap, reduceMotion } from './gsap.js';
+import { gsap, ScrollTrigger, reduceMotion } from './gsap.js';
 import { autoPlayInView } from './media.js';
 
 // Every scene runs on both layouts; `m` (phone) only changes distances and sizes.
@@ -123,8 +123,23 @@ export function initDining() {
       .add(() => { out.classList.remove('is-active'); gsap.set(out.children, { clearProps: 'all' }); })
       .fromTo(inn.children, { autoAlpha: 0, y: 24 }, { autoAlpha: 1, y: 0, duration: 0.9, stagger: 0.06, ease: 'expo.out' });
   };
+  // Auto-play: step to the next venue while the fan is on screen. Hover or keyboard
+  // focus holds it; picking a card restarts the countdown from that card.
+  const fan = root.querySelector('.fan');
+  let inView = false;
+  let held = false;
+  const timer = gsap.delayedCall(4.5, () => { show((current + 1) % cards.length); restart(); }).pause();
+  const restart = () => {
+    if (inView && !held && !reduceMotion) timer.restart(true); else timer.pause();
+  };
+  ScrollTrigger.create({ trigger: fan, start: 'top 60%', end: 'bottom 20%', onToggle: (self) => { inView = self.isActive; restart(); } });
+  fan.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') { held = true; restart(); } });
+  fan.addEventListener('pointerleave', () => { held = false; restart(); });
+  fan.addEventListener('focusin', (e) => { if (e.target.matches(':focus-visible')) { held = true; restart(); } });
+  fan.addEventListener('focusout', () => { held = false; restart(); });
+
   cards.forEach((c, i) => {
-    c.addEventListener('click', () => show(i));
+    c.addEventListener('click', () => { show(i); restart(); });
     c.addEventListener('keydown', (e) => {
       const step = { ArrowRight: 1, ArrowLeft: -1 }[e.key];
       if (!step) return;
